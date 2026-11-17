@@ -1,217 +1,222 @@
-# CricketBowlingCoach
+# CricketBowlingCoach 🏏
 
-A mobile-first cricket bowling analysis and coaching application for coaches using smartphones.
+A web application for analysing cricket bowling videos using **browser-based MoveNet pose estimation** and a **Python/FastAPI analysis backend**.
 
-## Overview
+The application helps review a bowler's movement by selecting and tracking the bowler, confirming the delivery interval, detecting body landmarks, and generating pose-based measurements, visualisations, and feedback.
 
-CricketBowlingCoach helps cricket coaches:
-- Upload bowling videos recorded on a smartphone.
-- Run automated video quality assessments.
-- Analyse bowling actions based on reliably visible evidence.
-- Review individual deliveries and patterns across a six-ball session.
-- Add coaching observations and recommendations.
-- Download and share PDF reports with students.
+## Features
 
-The application supports both **fast bowling** and **spin bowling**.
+- Upload bowling videos and assess basic video quality
+- Select the bowler and track the selected subject
+- Review and confirm the active bowling/delivery interval
+- Run MoveNet Lightning pose estimation in the browser using TensorFlow.js
+- Transfer keypoint coordinates and confidence scores to the backend
+- Map crop-relative keypoints back to the original video frame
+- Validate pose landmarks and calculate pose-based measurements
+- View annotated pose previews, results, and feedback
+- Reopen saved sessions
 
----
+## Technology stack
 
-## Technology Stack
+| Layer | Technologies |
+| --- | --- |
+| Frontend | React, TypeScript, Vite |
+| Browser pose inference | TensorFlow.js, MoveNet Lightning |
+| Backend API | Python 3.11, FastAPI, Uvicorn |
+| Video processing | OpenCV |
+| Validation and data models | Pydantic |
+| Testing | pytest |
 
-| Layer    | Technologies                                  |
-|----------|-----------------------------------------------|
-| Frontend | React, Vite, TypeScript, Tailwind CSS, PWA    |
-| Backend  | Python, FastAPI, OpenCV, MoveNet LiteRT         |
-| Reports  | PDF generation (future)                       |
-
----
-
-## Project Structure
-
-```
-CricketBowlingCoach/
-├── frontend/          # React + Vite + TypeScript PWA
-│   ├── public/        # Static assets, PWA icons
-│   └── src/
-│       ├── components/  # Reusable UI components
-│       ├── pages/       # Page-level components
-│       ├── services/    # API client and utilities
-│       ├── hooks/       # Custom React hooks
-│       ├── types/       # TypeScript type definitions
-│       └── styles/      # Global styles
-├── backend/           # FastAPI Python backend
-│   ├── app/
-│   │   ├── api/       # API route handlers
-│   │   ├── core/      # App configuration and settings
-│   │   ├── services/  # Business logic services
-│   │   ├── video/     # Video processing (future)
-│   │   ├── pose/      # Pose estimation (future)
-│   │   ├── analysis/  # Bowling analysis (future)
-│   │   └── reports/   # PDF report generation (future)
-│   ├── tests/         # Backend tests
-│   └── requirements.txt
-├── storage/           # Runtime file storage
-│   ├── uploads/       # Uploaded videos
-│   ├── processed/     # Processed video frames
-│   └── reports/       # Generated PDF reports
-├── docs/              # Documentation
-└── README.md
-```
-
----
+> **Note:** MoveNet inference runs in the **browser**, not in the Python backend. You do **not** need `ai-edge-litert` or a backend `.tflite` model file.
 
 ## Prerequisites
 
-- **Node.js** ≥ 18
-- **Python** ≥ 3.10
-- **npm** ≥ 9
+Install the following before starting:
 
----
+- [Git](https://git-scm.com/downloads)
+- [Python 3.11](https://www.python.org/downloads/) (ensure `python` works in a terminal)
+- [Node.js and npm](https://nodejs.org/) (use a version supported by the project's Vite installation)
+- A modern browser such as Chrome or Edge, preferably with WebGL support
 
-## Getting Started
+The commands below are for **Windows PowerShell**. Keep the backend and frontend running in separate terminals.
+
+## Getting started
 
 ### 1. Clone the repository
 
-```bash
-git clone <repository-url>
-cd CricketBowlingCoach
+```powershell
+git clone https://github.com/devikap19/CricketBowling.git
+cd CricketBowling
 ```
 
-### 2. Frontend setup
+If the repository is private, ask the owner to add your GitHub account as a collaborator and accept the invitation before cloning.
 
-```bash
-cd frontend
-npm install
-npm run dev
-```
+### 2. Install backend dependencies
 
-The frontend development server will start at **http://localhost:5173**.
+From the repository root:
 
-### 3. Backend setup
-
-```bash
+```powershell
 cd backend
-python -m venv venv
-
-# Windows
-venv\Scripts\activate
-
-# macOS / Linux
-source venv/bin/activate
-
-pip install -r requirements.txt
-uvicorn app.main:app --reload --port 8000
+python -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -r requirements.txt
 ```
 
-The backend API will be available at **http://localhost:8000**.
+Using the virtual environment's Python executable directly avoids PowerShell activation-policy issues.
 
-### 4. Verify the setup
+### 3. Start the backend
 
-- Frontend: Open **http://localhost:5173** in your browser.
-- Backend health check: Visit **http://localhost:8000/api/health** or run:
+In the **same backend terminal**:
 
-```bash
-curl http://localhost:8000/api/health
+```powershell
+.\.venv\Scripts\python.exe -m uvicorn app.main:app --reload
 ```
 
-### 5. Create a session (Stage 2A)
+The API should be available at:
 
-The frontend provides a mobile-friendly session form. It accepts MP4 and MOV videos up to 200 MB and submits the video with session details to `POST /api/sessions` as `multipart/form-data`.
+- API: http://127.0.0.1:8000
+- Interactive API docs: http://127.0.0.1:8000/docs
 
-Required form fields:
+**Keep this terminal running.**
 
-| Field | Values |
-|---|---|
-| `video` | MP4 or MOV file; maximum 200 MB |
-| `bowler_name` | Non-empty text, up to 120 characters |
-| `session_date` | Date in `YYYY-MM-DD` format |
-| `bowling_type` | `fast` or `spin` |
-| `bowling_arm` | `right` or `left` |
-| `camera_view` | `front`, `side`, `rear`, or `other` |
-| `notes` | Optional text, up to 2,000 characters |
+### 4. Install frontend dependencies
 
-Example response (`201 Created`):
+Open a **second PowerShell terminal**, navigate to the cloned repository, then:
 
-```json
-{
-  "session_id": "3f48ca4b-1f6c-48f3-9c77-f6d3cc2ad10d",
-  "bowler_name": "Asha Kumar",
-  "session_date": "2026-11-04",
-  "bowling_type": "fast",
-  "bowling_arm": "right",
-  "camera_view": "side",
-  "notes": null,
-  "original_filename": "practice.mp4",
-  "video_size_bytes": 1048576,
-  "status": "uploaded",
-  "created_at": "2026-11-04T10:30:00Z"
-}
+```powershell
+cd frontend
+npm.cmd ci
 ```
 
-Videos are streamed to `storage/uploads` under a generated server-side name; session metadata is stored separately as JSON in `storage/sessions`. The API does not return filesystem paths. The default limit is 200 MiB and can be changed with the `CBC_MAX_UPLOAD_SIZE_BYTES` environment variable. Unsupported extensions/content return `415`, oversized uploads return `413`, and invalid or missing form fields return `422`.
+`npm.cmd` is used instead of `npm` because some Windows PowerShell configurations block `npm.ps1`.
 
-Expected response:
+### 5. Start the frontend
 
-```json
-{
-  "status": "healthy",
-  "service": "CricketBowlingCoach API",
-  "version": "0.1.0"
-}
+In the frontend terminal:
+
+```powershell
+npm.cmd run dev
 ```
 
----
+Open the local address shown by Vite, normally:
 
-### 6. Check video quality (Stage 2B)
+**http://localhost:5173**
 
-After creating a session, request `POST /api/sessions/{session_id}/quality-check` to inspect the saved video with OpenCV. The response contains container metadata, independent reliability-rated metrics, recommendations, and an overall assessment. Results are saved separately as `storage/sessions/{session_id}.quality.json` and reused on later requests. Add `?refresh=true` to recalculate a saved result.
+Keep the backend running at the same time.
 
-The checks cover file integrity, resolution, frame rate, sampled brightness, a heuristic sharpness/blur metric, and an initial limited camera-motion estimate. Bowler visibility and pose coverage are returned as unavailable; this endpoint does not analyze bowling technique. Thresholds, rationale, and limitations are documented in [docs/VIDEO_QUALITY_CRITERIA.md](docs/VIDEO_QUALITY_CRITERIA.md).
+## How to use
 
-### 7. Select the bowler and confirm an active interval (Stage 4)
+1. Open the web application.
+2. Upload a cricket bowling video and enter the session details.
+3. Run the video quality check.
+4. Select the bowler to track.
+5. Review the tracking results and confirm the delivery interval.
+6. Start pose assessment. The browser loads MoveNet and processes the prepared crops.
+7. Review pose landmarks, measurements, annotated previews, and available feedback.
+8. Revisit saved sessions from the application when needed.
 
-After upload, pause the video on a frame where the intended bowler is clear and draw a box around that person. The backend initializes the installed OpenCV MIL tracker from this selection, proposes movement intervals, and reports interruptions. Review a proposed start/end time or enter adjusted times and explicitly confirm the interval before pose assessment.
+## How the analysis works
 
-- `GET /api/sessions/{session_id}/video` serves the uploaded video for seeking in the coach review screen.
-- `POST /api/sessions/{session_id}/subject-tracking` accepts `{"timestamp_seconds": 1.5, "box": {"x": 0.4, "y": 0.2, "width": 0.2, "height": 0.7}}`, with normalized box coordinates in `[0,1]`.
-- `POST /api/sessions/{session_id}/subject-interval` accepts `{"start_seconds": 2.0, "end_seconds": 5.5}` to confirm the reviewed bounds. Editing either time records the interval source as `manual`.
+```text
+Bowling video
+    ↓
+Video quality assessment
+    ↓
+Bowler selection and subject tracking
+    ↓
+Confirmed delivery interval
+    ↓
+Backend prepares tracked-bowler image crops
+    ↓
+Browser runs TensorFlow.js MoveNet Lightning
+    ↓
+17 pose keypoints + confidence scores per sampled frame
+    ↓
+Backend maps keypoints to original-frame coordinates
+    ↓
+Landmark validation, measurements and feedback
+    ↓
+Annotated previews and session results
+```
 
-### 8. Assess selected-bowler pose visibility (Stage 3 plus Stage 4 tracking)
+## Project structure
 
-After a successful technical integrity check, a coach-selected subject track, and a confirmed active interval, the session screen offers **Run bowler pose assessment**. `POST /api/sessions/{session_id}/pose-assessment` samples only the confirmed interval and runs MoveNet only on reliably tracked selected-person frames. Results are saved in `storage/sessions/{session_id}.pose.json`; previews are in `storage/processed/{session_id}/`. Cached results are reused; pass `?refresh=true` to rerun inference.
+```text
+CricketBowling/
+├── backend/
+│   ├── app/
+│   │   ├── api/            # FastAPI endpoints
+│   │   ├── core/           # Application configuration
+│   │   ├── pose/           # Tracking, crops, validation and analysis
+│   │   └── video/          # Video quality assessment
+│   ├── tests/              # Backend tests
+│   └── requirements.txt
+├── frontend/
+│   ├── src/
+│   │   ├── components/
+│   │   ├── pages/
+│   │   ├── services/       # API calls and browser MoveNet inference
+│   │   └── types/
+│   ├── package.json
+│   └── package-lock.json
+├── docs/                   # Technical and product documentation
+├── storage/                # Local session/video output (not committed)
+└── README.md
+```
 
-Tracking uses OpenCV MIL plus an HSV appearance check. It does not automatically switch to another person after repeated tracking loss. The interval proposal is based on selected-box movement and scale change, not delivery segmentation; coach review is required. See [docs/BOWLER_TRACKING.md](docs/BOWLER_TRACKING.md) for request details, interpretation, and limitations.
+## Testing
 
-The MoveNet Lightning weights are downloaded separately into `backend/models/` and excluded from Git. From the `backend` directory, run `python scripts/download_movenet_model.py` to fetch and verify the model. Runtime selection, model source, licensing, keypoint convention, thresholds, limitations, and a manual validation procedure are in [docs/POSE_ESTIMATION.md](docs/POSE_ESTIMATION.md).
+### Backend
 
-## Development
+From `backend/`, with the virtual environment created:
 
-### Frontend commands
+```powershell
+.\.venv\Scripts\python.exe -m pytest -v
+```
 
-| Command           | Description                  |
-|-------------------|------------------------------|
-| `npm run dev`     | Start development server     |
-| `npm run build`   | Build for production         |
-| `npm run preview` | Preview production build     |
-| `npm run lint`    | Run ESLint / Oxlint          |
+### Frontend production build
 
-### Backend commands
+From `frontend/`:
 
-| Command                                          | Description              |
-|--------------------------------------------------|--------------------------|
-| `uvicorn app.main:app --reload --port 8000`      | Start dev server         |
-| `pytest`                                         | Run tests                |
+```powershell
+npm.cmd run build
+```
 
-Run backend tests from the `backend` directory with `pytest`.
+The build may show a bundle-size warning; this does not necessarily mean the build failed.
 
----
+## Troubleshooting
 
-## Product Principles
+**`npm.ps1 cannot be loaded because running scripts is disabled`**  
+Use `npm.cmd` instead of `npm`, for example `npm.cmd run dev`.
 
-See [docs/PRODUCT_REQUIREMENTS.md](docs/PRODUCT_REQUIREMENTS.md) for the full product requirements and guiding principles.
+**PowerShell blocks virtual-environment activation**  
+Use `backend\.venv\Scripts\python.exe` directly, as shown in the setup commands. Activation is optional.
 
----
+**`python` is not recognised or the wrong Python version is used**  
+Install Python 3.11 and verify with `python --version`. On Windows, `py -3.11` may also be available.
 
-## License
+**Frontend opens but API calls fail**  
+Confirm the backend is running on port **8000** and the frontend is running on **localhost:5173**. Check the browser console and backend terminal for errors. The backend's default CORS configuration expects `http://localhost:5173`.
 
-Private — All rights reserved.
+**Browser pose estimation is slow or fails**  
+Use an up-to-date Chrome or Edge browser and check WebGL availability. Initial model loading can take longer than subsequent runs. Open the browser developer console for detailed errors.
+
+**Uploads or sessions are missing on a fresh clone**  
+This is expected: personal videos and generated session files are intentionally excluded from Git. Upload a new video to create a new session. If a required storage directory is absent, create it under `storage/`.
+
+**Port 8000 or 5173 is already in use**  
+Stop the conflicting process. If you change ports, update the corresponding frontend API URL or backend CORS configuration as needed.
+
+## Notes for collaborators
+
+- Do not commit `.env` files, virtual environments, `node_modules`, uploaded videos, or generated reports.
+- Install Python dependencies from `backend/requirements.txt` and frontend dependencies from `frontend/package-lock.json`.
+- Create a feature branch before making major changes and open a pull request when ready.
+- The browser-based MoveNet implementation is the active inference path; the old Python LiteRT implementation has been removed.
+
+## Current validation
+
+On the original development machine, the backend test suite completed with **61 passed, 1 skipped**, and the frontend production build succeeded. These results are not a guarantee of compatibility with every machine; collaborators should run the checks above after cloning.
+
+## Repository
+
+https://github.com/devikap19/CricketBowling
